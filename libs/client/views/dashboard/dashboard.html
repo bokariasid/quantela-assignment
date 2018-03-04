@@ -1,0 +1,32 @@
+<div ng-init="getDeviceDetails()">
+
+<table border="1">
+	<thead border="1">
+		<tr>S.No.</tr>
+		<tr>USER NAME</tr>
+		<tr>OS NAME</tr>
+		<tr>PROCESSORS</tr>
+		<tr>NETWORK STATUS</tr>
+		<tr>RAM TOTAL</tr>
+		<tr>RAM FREE</tr>
+		<tr>LOAD AVERAGE</tr>
+	</thead>
+	<tbody>
+		<tr ng-repeat="osDetail in osDetails">
+			<td>{{ $index + 1 }}</td>
+			<td>{{ osDetail.username }}</td>
+			<td>{{ osDetail.os }}</td>
+			<td>{{ osDetail.processors }}</td>
+			<td>
+				<p ng-if="osDetail.networkStatus === true">Connected</p>
+				<p ng-if="osDetail.networkStatus === false">Not Connected</p>
+			</td>
+			<td>{{ osDetail.ramTotal }}</td>
+			<td>{{ osDetail.ramFree }}</td>
+			<td>
+				<span ng-repeat="loadValue in osDetail.loadAverage">{{ loadValue }}, </span>
+			</td>
+		</tr>
+	</tbody>
+</table>
+</div>

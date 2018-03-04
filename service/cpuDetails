@@ -1,0 +1,97 @@
+#!/usr/bin/env node
+var dir = __dirname;
+dir = dir.split('/')
+dir.pop();dir.pop();
+dir = dir.join('/')+'/';
+
+require('dotenv').config({path:dir+'.env'});
+const request = require('request');
+const os = require('os');
+const config = require('../config.json');
+const async = require('async');
+const bytes = require('bytes');
+
+
+/**
+ * the crontab configuration to implemented for the following cron to be run every minute is as follows between a given interval.
+ */
+// */1    07-19        *     * *      path_to_script.
+async.waterfall([
+	getNetworkStatus,
+	getOsDetails,
+	transmitData
+], function(err, results){
+	if(err){
+		console.log(err);
+	} else {
+		console.log(results);
+		process.exit();
+	}
+});
+function getNetworkStatus(callback){
+	var networkStatus = true;
+	request
+	.get(config.googleUrl)
+	.on('error', function(err) {
+	    networkStatus = false;
+	    callback(null, networkStatus);
+	})
+	.on('response', function(response) {
+		if(response.statusCode === 200){
+			networkStatus = true;
+		    callback(null, networkStatus);
+		} else {
+			networkStatus = false;
+		    callback(null, networkStatus);
+		}
+	});
+}
+
+function getOsDetails(networkStatus, callback) {
+	var detailsToSend = {};
+	detailsToSend.networkStatus = networkStatus;
+	detailsToSend.username = os.userInfo().username;
+	detailsToSend.os = os.platform();
+	detailsToSend.processors = os.cpus().length;
+	detailsToSend.ramTotal = bytes(os.totalmem());
+	detailsToSend.ramFree = bytes(os.freemem());
+	detailsToSend.loadAverage = os.loadavg();
+	callback(null, detailsToSend);
+}
+
+function transmitData(objectToSend, callback) {
+	// body...
+	var oauthRequestBody = {
+		"grant_type":config.default.user.grant_type,
+		"client_id":config.default.client.clientId,
+		"client_secret":config.default.client.clientSecret,
+		"username":config.default.user.username,
+		"password":config.default.user.password
+	};
+	var requestObject = {
+		url:config.oauthUrl,
+		body:oauthRequestBody,
+		json:true
+	};
+	request.post(requestObject, function(err, response, body) {
+		var accessToken = body.access_token;
+		var oauthRequestObject = {
+			url:config.postUrl,
+			method:"POST",
+			body:objectToSend,
+			headers:{
+				Authorization: 'Bearer '+accessToken
+			},
+			json:true
+		};
+		request.post(oauthRequestObject, function(err, response, body) {
+			if (err) {
+				callback(err);
+			} else {
+				callback(null, body);
+			}
+		});
+	});
+}
+
+

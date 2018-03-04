@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+var debug = require('debug')('restapi');
+
+var libs = process.cwd() + '/libs/';
+var config = require(libs + 'config');
+var log = require(libs + 'log')(module);
+var app = require(libs + 'app');
+const moment = require('moment');
+const sio = require('socket.io');
+const osDetailsModel = require('../libs/model/os_details');
+port = process.env.PORT ? process.env.PORT : 3000;
+app.set('port', port);
+var server = app.listen(app.get('port'));
+io = sio(server);
+io.on('connection', function(socket) {
+    setInterval(function() {
+        var from = moment().subtract(1, 'minutes').toDate();
+        var to = moment().toDate();
+        var query = {'created_at':{'$gte':from,'$lt':to}};
+        osDetailsModel.find(query, function (err, osDetails) {
+        // This strategy can be used to get the updates which might have been missed.
+        // osDetailsModel.find(function (err, osDetails) {
+            if (!err) {
+                io.emit("data-update", osDetails);
+            } else {
+                res.statusCode = 500;
+                return res.json({
+                    error: 'Server error'
+                });
+            }
+        });
+    }, 60000);
+});
+
+
